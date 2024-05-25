@@ -1,108 +1,110 @@
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, median_absolute_error, confusion_matrix, ConfusionMatrixDisplay, accuracy_score
 import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.model_selection import train_test_split, RandomizedSearchCV
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.metrics import classification_report, accuracy_score, roc_curve, auc, confusion_matrix, ConfusionMatrixDisplay
-from sklearn.preprocessing import label_binarize
-from imblearn.over_sampling import SMOTE
 
-# Cargar datos
-df_stress_percibido = pd.read_excel('Data/datos_estres_pss.xlsx')
-df_biometricos = pd.read_excel('Data/datos_personas_simulados.xlsx')
+# Cargar los datos
+file_path = './Data/datos_biometricos_lineales.xlsx'
+data = pd.read_excel(file_path)
 
-# Preprocesar datos
-df_stress_percibido['id'] = df_stress_percibido.index
-df_biometricos['id'] = df_biometricos.index
-df = pd.merge(df_stress_percibido, df_biometricos, on='id').drop(columns=['id']).dropna()
-
-# Separar características y etiquetas
-X = df.drop(columns=['Estrés (%)'])
-y = df['Estrés (%)']
+# Preparar los datos
+X = data.drop(columns=['Estrés (%)'])
+y = data['Estrés (%)']
 
 # Dividir los datos en conjuntos de entrenamiento y prueba
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Aplicar SMOTE para balancear las clases
-smote = SMOTE(random_state=42)
-X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train)
+# Definir el modelo con los hiperparámetros especificados
+model = RandomForestRegressor(
+    bootstrap=True,
+    ccp_alpha=0.0,
+    criterion='squared_error',
+    max_depth=10,
+    max_features='sqrt',
+    max_leaf_nodes=None,
+    max_samples=None,
+    min_impurity_decrease=0.0,
+    min_samples_leaf=1,
+    min_samples_split=10,
+    min_weight_fraction_leaf=0.0,
+    monotonic_cst=None,
+    n_estimators=100,
+    n_jobs=None,
+    oob_score=False,
+    random_state=42,
+    verbose=0,
+    warm_start=False
+)
 
-# Definir parámetros para la búsqueda
-param_grid = {
-    'n_estimators': [100, 200, 300],
-    'learning_rate': [0.01, 0.1, 0.2],
-    'max_depth': [3, 5, 7],
-    'min_samples_split': [2, 5, 10],
-    'min_samples_leaf': [1, 3, 5],
-    'subsample': [0.8, 0.9, 1.0],
-    'max_features': ['sqrt', 'log2']
-}
+# Entrenar el modelo
+model.fit(X_train, y_train)
 
-# Inicializar el modelo
-gbc = GradientBoostingClassifier(random_state=42)
+# Hacer predicciones
+y_pred_train = model.predict(X_train)
+y_pred_test = model.predict(X_test)
 
-# Realizar la búsqueda de hiperparámetros
-random_search = RandomizedSearchCV(estimator=gbc, param_distributions=param_grid, 
-                                   n_iter=100, cv=5, n_jobs=-1, verbose=2, scoring='accuracy', random_state=42)
-random_search.fit(X_train_smote, y_train_smote)
+# Evaluar el modelo
+train_mse = mean_squared_error(y_train, y_pred_train)
+test_mse = mean_squared_error(y_test, y_pred_test)
+train_r2 = r2_score(y_train, y_pred_train)
+test_r2 = r2_score(y_test, y_pred_test)
+train_mae = mean_absolute_error(y_train, y_pred_train)
+test_mae = mean_absolute_error(y_test, y_pred_test)
+train_medae = median_absolute_error(y_train, y_pred_train)
+test_medae = median_absolute_error(y_test, y_pred_test)
 
-# Evaluar el mejor modelo
-best_model = random_search.best_estimator_
-y_pred = best_model.predict(X_test)
+# Discretizar los niveles de estrés en categorías: bajo (0-33), medio (34-66), alto (67-100)
+bins = [0, 33, 66, 100]
+labels = ['Bajo', 'Medio', 'Alto']
+y_train_binned = pd.cut(y_train, bins=bins, labels=labels, include_lowest=True)
+y_test_binned = pd.cut(y_test, bins=bins, labels=labels, include_lowest=True)
+y_pred_test_binned = pd.cut(y_pred_test, bins=bins, labels=labels, include_lowest=True)
 
-# Binarizar las etiquetas
-y_test_bin = label_binarize(y_test, classes=np.unique(y))
-n_classes = y_test_bin.shape[1]
+# Crear la matriz de confusión
+cm = confusion_matrix(y_test_binned, y_pred_test_binned, labels=labels)
 
-# Calcular ROC AUC para cada clase
-fpr = dict()
-tpr = dict()
-roc_auc = dict()
-for i in range(n_classes):
-    fpr[i], tpr[i], _ = roc_curve(y_test_bin[:, i], best_model.predict_proba(X_test)[:, i])
-    roc_auc[i] = auc(fpr[i], tpr[i])
-
-# Métricas
-accuracy = accuracy_score(y_test, y_pred)
-class_report = classification_report(y_test, y_pred)
-conf_matrix = confusion_matrix(y_test, y_pred)
-
-print("Mejores Hiperparámetros:", random_search.best_params_)
-print("Exactitud:", accuracy)
-print("ROC AUC por clase:", roc_auc)
-print("Reporte de Clasificación:\n", class_report)
-print("Matriz de Confusión:\n", conf_matrix)
-
-# Gráficos
-
-# Matriz de confusión
-fig, ax = plt.subplots(figsize=(10, 7))
-disp = ConfusionMatrixDisplay(confusion_matrix=conf_matrix)
-disp.plot(ax=ax)
+# Mostrar la matriz de confusión
+plt.figure(figsize=(6, 6))
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
+disp.plot(cmap=plt.cm.Blues)
 plt.title('Matriz de Confusión')
 plt.show()
 
-# Curva ROC Multiclase
-fig, ax = plt.subplots(figsize=(10, 7))
-for i in range(n_classes):
-    plt.plot(fpr[i], tpr[i], label=f'Clase {i} (área = {roc_auc[i]:.2f})')
-    
-plt.plot([0, 1], [0, 1], 'k--')
-plt.xlim([0.0, 1.0])
-plt.ylim([0.0, 1.05])
-plt.xlabel('Tasa de Falsos Positivos')
-plt.ylabel('Tasa de Verdaderos Positivos')
-plt.title('Curva ROC Multiclase')
-plt.legend(loc="lower right")
-plt.show()
+# Calcular el accuracy
+accuracy = accuracy_score(y_test_binned, y_pred_test_binned)
+print(f'Accuracy: {accuracy}')
 
-# Importancia de características
-feature_importances = pd.DataFrame(best_model.feature_importances_,
-                                   index = X_train.columns,
-                                   columns=['importance']).sort_values('importance', ascending=False)
+# Mostrar resultados
+print(f'Mejor conjunto de hiperparámetros: {model.get_params()}')
+print(f'Train MSE: {train_mse}, Train R²: {train_r2}')
+print(f'Test MSE: {test_mse}, Test R²: {test_r2}')
+print(f'Train MAE: {train_mae}, Test MAE: {test_mae}')
+print(f'Train MedAE: {train_medae}, Test MedAE: {test_medae}')
 
-fig, ax = plt.subplots(figsize=(10, 7))
-sns.barplot(x=feature_importances.importance, y=feature_importances.index, ax=ax)
-plt.title('Importancia de Características')
+# Graficar resultados de predicción
+plt.figure(figsize=(14, 8))
+
+# Gráfico de MSE
+plt.subplot(2, 2, 1)
+plt.bar(['Train MSE', 'Test MSE'], [train_mse, test_mse], color=['blue', 'orange'])
+plt.title('MSE')
+
+# Gráfico de R²
+plt.subplot(2, 2, 2)
+plt.bar(['Train R²', 'Test R²'], [train_r2, test_r2], color=['blue', 'orange'])
+plt.title('R²')
+
+# Gráfico de MAE
+plt.subplot(2, 2, 3)
+plt.bar(['Train MAE', 'Test MAE'], [train_mae, test_mae], color=['blue', 'orange'])
+plt.title('MAE')
+
+# Gráfico de MedAE
+plt.subplot(2, 2, 4)
+plt.bar(['Train MedAE', 'Test MedAE'], [train_medae, test_medae], color=['blue', 'orange'])
+plt.title('MedAE')
+
+plt.tight_layout()
 plt.show()
