@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, median_absolute_error, confusion_matrix, ConfusionMatrixDisplay, accuracy_score
 import matplotlib.pyplot as plt
+import joblib
 
 # Cargar los datos
 file_path = './Data/datos_biometricos_lineales.xlsx'
@@ -34,12 +35,15 @@ model = RandomForestRegressor(
     n_jobs=None,
     oob_score=False,
     random_state=42,
-    verbose=0,
+    verbose=1000,
     warm_start=False
 )
 
 # Entrenar el modelo
 model.fit(X_train, y_train)
+
+# Guardar el modelo entrenado
+joblib.dump(model, 'modelo_entrenado.pkl')
 
 # Hacer predicciones
 y_pred_train = model.predict(X_train)
