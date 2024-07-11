@@ -32,7 +32,25 @@ param_grid = {
     'max_features': [ 'sqrt'],
     'bootstrap': [True],
 }
-
+# param_grid = {
+#     'n_estimators': [10, 50, 100, 200, 500, 1000],  # Número de árboles en el bosque
+#     'criterion': ['squared_error', 'absolute_error', 'poisson'],  # Función para medir la calidad de una división
+#     'max_depth': [None, 10, 20, 30, 40, 50],  # Profundidad máxima del árbol
+#     'min_samples_split': [2, 5, 10, 20],  # Número mínimo de muestras necesarias para dividir un nodo
+#     'min_samples_leaf': [1, 2, 4, 8],  # Número mínimo de muestras necesarias en un nodo hoja
+#     'min_weight_fraction_leaf': [0.0, 0.1, 0.2],  # Fracción mínima de peso de la suma total en un nodo hoja
+#     'max_features': ['auto', 'sqrt', 'log2'],  # Número de características a considerar para la mejor división
+#     'max_leaf_nodes': [None, 10, 20, 30],  # Crecimiento máximo de nodos hojas en el árbol
+#     'min_impurity_decrease': [0.0, 0.1, 0.2],  # Umbral para reducir la impureza
+#     'bootstrap': [True, False],  # Si se debe utilizar el muestreo con reemplazo
+#     'oob_score': [True, False],  # Si se debe utilizar la muestra fuera de bolsa para evaluar la precisión generalizada
+#     'n_jobs': [-1, 1],  # Número de trabajos para ejecutar en paralelo (-1 usa todos los procesadores)
+#     'random_state': [None, 42],  # Semilla para el generador de números aleatorios
+#     'verbose': [0, 1],  # Nivel de verbosidad
+#     'warm_start': [False, True],  # Reutilizar la solución del ajuste anterior para agregar más estimadores al conjunto
+#     'ccp_alpha': [0.0, 0.1, 0.2],  # Complejidad de coste para poda mínima
+#     'max_samples': [None, 0.5, 0.75, 1.0],  # Número o fracción de muestras para entrenar cada base estimador
+# }
 
 
 best_r2 = 0
