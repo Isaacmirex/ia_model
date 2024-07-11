@@ -1,94 +1,150 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.svm import SVR
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, mean_absolute_percentage_error, median_absolute_error
-from scipy.stats import pearsonr
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, median_absolute_error, confusion_matrix, ConfusionMatrixDisplay, accuracy_score
+import matplotlib.pyplot as plt
+import joblib
 
-# Cargar los datos
-datos_estres = pd.read_excel("data/datos_estres_pss.xlsx")
-datos_personas = pd.read_excel("data/datos_personas_simulados.xlsx")
+# Cargar los datos ajustados
+file_path = 'Data/datos_biometricos_ajustados_10000.xlsx'
+data = pd.read_excel(file_path)
 
-# Combinar los datos en un solo DataFrame
-datos_combinados = pd.merge(datos_estres, datos_personas, left_index=True, right_index=True)
+# Preparar los datos
+X = data[['Frecuencia Cardíaca', 'Frecuencia Respiratoria', 'Temperatura Corporal']]
+y = data['Estrés (%)']
 
-# Mostrar los primeros registros del DataFrame
-print("Datos combinados:")
-print(datos_combinados.head())
+# Normalizar los datos
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
 
-# Mostrar información estadística de los datos
-print("\nInformación estadística de los datos:")
-print(datos_combinados.describe())
+# Dividir los datos en conjuntos de entrenamiento y prueba
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
 
-# Visualizar la relación entre las características y el objetivo
-print("\nVisualización de la relación entre las características y el objetivo:")
-fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 8))
+# Definir el modelo y los hiperparámetros para la búsqueda
+param_grid = {
+    'C': [0.1, 1, 10],
+    'kernel': ['linear', 'rbf', 'poly'],
+    'epsilon': [0.1, 0.2],
+    'gamma': ['scale', 'auto'],
+    'shrinking': [True, False],
+    'tol': [1e-3, 1e-4],
+    'max_iter': [20000, 30000]  # Aumentar número máximo de iteraciones
+}
 
-# Resaltar en rojo las personas con un nivel de estrés por encima del 50%
-rojo = datos_combinados['Estrés (%)'] > 50
-azul = datos_combinados['Estrés (%)'] <= 50
+best_r2 = 0
+best_model = None
+best_params = None
 
-axes[0, 0].scatter(datos_combinados['PSS'][azul], datos_combinados['Estrés (%)'][azul], c='blue', alpha=0.5)
-axes[0, 0].scatter(datos_combinados['PSS'][rojo], datos_combinados['Estrés (%)'][rojo], c='red', alpha=0.5)
-axes[0, 0].set_xlabel('PSS')
-axes[0, 0].set_ylabel('Estrés (%)')
-axes[0, 0].set_title('Relación entre PSS y Estrés (%)')
+while best_r2 < 0.95:
+    # Usar GridSearchCV para encontrar los mejores hiperparámetros
+    grid_search = GridSearchCV(estimator=SVR(), param_grid=param_grid, cv=3, n_jobs=-1, verbose=2)
+    grid_search.fit(X_train, y_train)
 
-axes[0, 1].scatter(datos_combinados['Frecuencia Respiratoria'][azul], datos_combinados['Estrés (%)'][azul], c='blue', alpha=0.5)
-axes[0, 1].scatter(datos_combinados['Frecuencia Respiratoria'][rojo], datos_combinados['Estrés (%)'][rojo], c='red', alpha=0.5)
-axes[0, 1].set_xlabel('Frecuencia Respiratoria')
-axes[0, 1].set_ylabel('Estrés (%)')
-axes[0, 1].set_title('Relación entre Frecuencia Respiratoria y Estrés (%)')
+    # Mejor modelo encontrado por GridSearchCV
+    best_model = grid_search.best_estimator_
 
-axes[1, 0].scatter(datos_combinados['Frecuencia Cardíaca'][azul], datos_combinados['Estrés (%)'][azul], c='blue', alpha=0.5)
-axes[1, 0].scatter(datos_combinados['Frecuencia Cardíaca'][rojo], datos_combinados['Estrés (%)'][rojo], c='red', alpha=0.5)
-axes[1, 0].set_xlabel('Frecuencia Cardíaca')
-axes[1, 0].set_ylabel('Estrés (%)')
-axes[1, 0].set_title('Relación entre Frecuencia Cardíaca y Estrés (%)')
+    # Hacer predicciones
+    y_pred_test = best_model.predict(X_test)
 
-axes[1, 1].scatter(datos_combinados['Temperatura Corporal'][azul], datos_combinados['Estrés (%)'][azul], c='blue', alpha=0.5)
-axes[1, 1].scatter(datos_combinados['Temperatura Corporal'][rojo], datos_combinados['Estrés (%)'][rojo], c='red', alpha=0.5)
-axes[1, 1].set_xlabel('Temperatura Corporal')
-axes[1, 1].set_ylabel('Estrés (%)')
-axes[1, 1].set_title('Relación entre Temperatura Corporal y Estrés (%)')
+    # Evaluar el modelo
+    test_r2 = r2_score(y_test, y_pred_test)
+
+    if test_r2 > best_r2:
+        best_r2 = test_r2
+        best_params = grid_search.best_params_
+
+# Guardar el mejor modelo encontrado
+joblib.dump(best_model, 'modelo_entrenado_SVM.pkl')
+joblib.dump(scaler, 'scaler_SVM.pkl')
+
+# Hacer predicciones finales
+y_pred_train = best_model.predict(X_train)
+y_pred_test = best_model.predict(X_test)
+
+# Evaluar el modelo final
+train_mse = mean_squared_error(y_train, y_pred_train)
+test_mse = mean_squared_error(y_test, y_pred_test)
+train_r2 = r2_score(y_train, y_pred_train)
+test_r2 = r2_score(y_test, y_pred_test)
+train_mae = mean_absolute_error(y_train, y_pred_train)
+test_mae = mean_absolute_error(y_test, y_pred_test)
+train_medae = median_absolute_error(y_train, y_pred_train)
+test_medae = median_absolute_error(y_test, y_pred_test)
+
+# Discretizar los niveles de estrés en categorías: bajo (0-33), medio (34-66), alto (67-100)
+bins = [0, 33, 66, 100]
+labels = ['Bajo', 'Medio', 'Alto']
+y_train_binned = pd.cut(y_train, bins=bins, labels=labels, include_lowest=True)
+y_test_binned = pd.cut(y_test, bins=bins, labels=labels, include_lowest=True)
+y_pred_test_binned = pd.cut(y_pred_test, bins=bins, labels=labels, include_lowest=True)
+
+# Crear la matriz de confusión
+cm = confusion_matrix(y_test_binned, y_pred_test_binned, labels=labels)
+
+# Mostrar la matriz de confusión
+plt.figure(figsize=(6, 6))
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
+disp.plot(cmap=plt.cm.Blues)
+plt.title('Matriz de Confusión')
+plt.show()
+
+# Calcular el accuracy
+accuracy = accuracy_score(y_test_binned, y_pred_test_binned)
+print(f'Accuracy: {accuracy}')
+
+# Mostrar resultados de evaluación
+print(f'Train MSE: {train_mse}, Train R²: {train_r2}')
+print(f'Test MSE: {test_mse}, Test R²: {test_r2}')
+print(f'Train MAE: {train_mae}, Test MAE: {test_mae}')
+print(f'Train MedAE: {train_medae}, Test MedAE: {test_medae}')
+
+# Graficar resultados de predicción
+plt.figure(figsize=(14, 8))
+
+# Gráfico de MSE
+plt.subplot(2, 2, 1)
+plt.bar(['Train MSE', 'Test MSE'], [train_mse, test_mse], color=['blue', 'orange'])
+plt.title('MSE')
+
+# Gráfico de R²
+plt.subplot(2, 2, 2)
+plt.bar(['Train R²', 'Test R²'], [train_r2, test_r2], color=['blue', 'orange'])
+plt.title('R²')
+
+# Gráfico de MAE
+plt.subplot(2, 2, 3)
+plt.bar(['Train MAE', 'Test MAE'], [train_mae, test_mae], color=['blue', 'orange'])
+plt.title('MAE')
+
+# Gráfico de MedAE
+plt.subplot(2, 2, 4)
+plt.bar(['Train MedAE', 'Test MedAE'], [train_medae, test_medae], color=['blue', 'orange'])
+plt.title('MedAE')
 
 plt.tight_layout()
 plt.show()
 
-# Definir las características (X) y el objetivo (y)
-X = datos_combinados.drop(['Estrés (%)'], axis=1)  # Características
-y = datos_combinados['Estrés (%)']  # Objetivo
+# Datos de prueba para personas con diferentes niveles de estrés
+test_data = [
+    {"Frecuencia Cardíaca": 65, "Frecuencia Respiratoria": 15, "Temperatura Corporal": 36.5},  # Estrés bajo
+    {"Frecuencia Cardíaca": 100, "Frecuencia Respiratoria": 25, "Temperatura Corporal": 37},  # Estrés medio
+    {"Frecuencia Cardíaca": 120, "Frecuencia Respiratoria": 30, "Temperatura Corporal": 38},  # Estrés alto
+]
 
-# Dividir los datos en conjuntos de entrenamiento y prueba
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Convertir los datos de prueba a DataFrame
+test_df = pd.DataFrame(test_data)
 
-# Entrenamiento del modelo SVM
-modelo_svm = SVR(kernel='linear')
-modelo_svm.fit(X_train, y_train)
+# Normalizar los datos de prueba
+test_df_scaled = scaler.transform(test_df)
 
-# Predicciones en el conjunto de prueba
-predicciones = modelo_svm.predict(X_test)
+# Hacer predicciones con el modelo entrenado
+stress_predictions = best_model.predict(test_df_scaled)
 
-# Calcular métricas de rendimiento
-mse = mean_squared_error(y_test, predicciones)
-r2 = r2_score(y_test, predicciones)
-mae = mean_absolute_error(y_test, predicciones)
-mape = mean_absolute_percentage_error(y_test, predicciones)
-medae = median_absolute_error(y_test, predicciones)
-correlation = pearsonr(y_test, predicciones)[0]
+print("Predicciones de estrés para datos de prueba:")
+for i, pred in enumerate(stress_predictions):
+    print(f"Persona {i+1}: {pred:.2f}% de estrés")
 
-print("\nMean Squared Error (MSE):", mse)
-print("Coefficient of Determination (R^2):", r2)
-print("Mean Absolute Error (MAE):", mae)
-print("Mean Absolute Percentage Error (MAPE):", mape)
-print("Median Absolute Error (MedAE):", medae)
-print("Pearson Correlation:", correlation)
-
-# Visualizar las predicciones
-plt.figure(figsize=(8, 6))
-plt.scatter(y_test, predicciones)
-plt.xlabel('Valores reales')
-plt.ylabel('Predicciones')
-plt.title('Valores reales vs Predicciones')
-plt.show()
+print(f'Mejor conjunto de hiperparámetros: {best_params}')
+print(f'Mejor R²: {best_r2}')

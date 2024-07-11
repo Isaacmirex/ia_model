@@ -34,6 +34,7 @@ param_grid = {
 }
 
 
+
 best_r2 = 0
 best_model = None
 best_params = None
@@ -57,8 +58,8 @@ while best_r2 < 0.95:
         best_params = grid_search.best_params_
 
 # Guardar el mejor modelo encontrado
-joblib.dump(best_model, 'modelo_entrenado.pkl')
-joblib.dump(scaler, 'scaler.pkl')
+joblib.dump(best_model, 'modelo_entrenado_RF.pkl')
+joblib.dump(scaler, 'scaler_RF.pkl')
 
 # Hacer predicciones finales
 y_pred_train = best_model.predict(X_train)
