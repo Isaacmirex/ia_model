@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import joblib
 
 # Cargar los datos ajustados
-file_path = 'Data/datos_biometricos_ajustados_10000.xlsx'
+file_path = 'Data/datos_entrenamiento.xlsx'
 data = pd.read_excel(file_path)
 
 # Preparar los datos
@@ -32,6 +32,21 @@ param_grid = {
     'tol': [1e-3, 1e-4],
     'max_iter': [20000, 30000]  # Aumentar número máximo de iteraciones
 }
+# Parametros probados
+# param_grid = {
+#     'C': [0.1, 1, 10, 100],  # Regularization parameter
+#     'epsilon': [0.1, 0.2, 0.5, 1.0],  # Epsilon in the epsilon-SVR model
+#     'kernel': ['linear', 'rbf', 'poly', 'sigmoid'],  # Kernel type
+#     'degree': [2, 3, 4],  # Degree of the polynomial kernel function ('poly')
+#     'gamma': ['scale', 'auto', 0.001, 0.01, 0.1, 1],  # Kernel coefficient
+#     'coef0': [0.0, 0.1, 0.5, 1.0],  # Independent term in kernel function ('poly' and 'sigmoid')
+#     'shrinking': [True, False],  # Whether to use the shrinking heuristic
+#     'tol': [1e-3, 1e-4, 1e-5],  # Tolerance for stopping criterion
+#     'cache_size': [200, 500, 1000],  # Size of the kernel cache (in MB)
+#     'verbose': [False],  # Enable verbose output
+#     'max_iter': [-1, 20000, 30000, 50000]  # Hard limit on iterations within solver
+# }
+
 
 best_r2 = 0
 best_model = None

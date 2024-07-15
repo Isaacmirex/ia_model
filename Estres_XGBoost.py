@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import joblib
 
 # Cargar los datos ajustados
-file_path = 'Data/datos_biometricos_ajustados_10000.xlsx'
+file_path = 'Data/datos_entrenamiento.xlsx'
 data = pd.read_excel(file_path)
 
 # Preparar los datos
@@ -33,6 +33,29 @@ param_grid = {
     'reg_alpha': [0, 0.1, 0.5],
     'reg_lambda': [1, 1.5, 2]
 }
+# Parametros probados 
+# param_grid = {
+#     'n_estimators': [100, 200, 500, 1000],  # Number of boosting rounds
+#     'learning_rate': [0.01, 0.05, 0.1, 0.2, 0.3],  # Step size shrinkage
+#     'max_depth': [3, 5, 7, 9, 11, 13],  # Maximum depth of a tree
+#     'subsample': [0.5, 0.6, 0.7, 0.8, 0.9, 1.0],  # Subsample ratio of the training instances
+#     'colsample_bytree': [0.5, 0.6, 0.7, 0.8, 0.9, 1.0],  # Subsample ratio of columns when constructing each tree
+#     'colsample_bylevel': [0.5, 0.6, 0.7, 0.8, 0.9, 1.0],  # Subsample ratio of columns for each split, in each level
+#     'colsample_bynode': [0.5, 0.6, 0.7, 0.8, 0.9, 1.0],  # Subsample ratio of columns for each split, in each node
+#     'gamma': [0, 0.1, 0.2, 0.3, 0.4, 0.5],  # Minimum loss reduction required to make a further partition on a leaf node of the tree
+#     'min_child_weight': [1, 2, 3, 4, 5],  # Minimum sum of instance weight (hessian) needed in a child
+#     'max_delta_step': [0, 1, 2, 3, 4, 5],  # Maximum delta step we allow each leaf output to be
+#     'reg_alpha': [0, 0.1, 0.5, 1, 1.5, 2],  # L1 regularization term on weights
+#     'reg_lambda': [0.5, 1, 1.5, 2, 2.5, 3],  # L2 regularization term on weights
+#     'scale_pos_weight': [1, 2, 3, 4, 5],  # Balancing of positive and negative weights
+#     'base_score': [0.5, 0.75, 1],  # The initial prediction score of all instances, global bias
+#     'random_state': [42],  # Seed for random number generator
+#     'booster': ['gbtree', 'gblinear', 'dart'],  # Specify which booster to use: gbtree, gblinear or dart
+#     'tree_method': ['auto', 'exact', 'approx', 'hist', 'gpu_hist'],  # Specify which tree method to use
+#     'verbosity': [0, 1, 2, 3],  # The degree of verbosity
+#     'objective': ['reg:squarederror', 'reg:squaredlogerror', 'reg:logistic', 'binary:logistic', 'binary:logitraw', 'count:poisson', 'multi:softmax', 'multi:softprob', 'rank:pairwise', 'reg:gamma', 'reg:tweedie']  # Specify the learning task and the corresponding learning objective
+# }
+
 
 best_r2 = 0
 best_model = None

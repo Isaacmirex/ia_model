@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import joblib
 
 # Cargar los datos ajustados
-file_path = 'Data/datos_biometricos_ajustados_10000.xlsx'
+file_path = 'Data/datos_entrenamiento.xlsx'
 data = pd.read_excel(file_path)
 
 # Preparar los datos
