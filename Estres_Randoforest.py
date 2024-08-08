@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, median_absolute_error, confusion_matrix, ConfusionMatrixDisplay, accuracy_score
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, median_absolute_error
 import matplotlib.pyplot as plt
 import joblib
 
@@ -11,8 +11,8 @@ import joblib
 file_path = 'Data/datos_entrenamiento.xlsx'
 data = pd.read_excel(file_path)
 
-# Preparar los datos
-X = data[['Frecuencia Cardíaca', 'Frecuencia Respiratoria', 'Temperatura Corporal']]
+# Preparar los datos incluyendo la edad
+X = data[['Frecuencia Cardíaca', 'Frecuencia Respiratoria', 'Temperatura Corporal', 'Edad']]
 y = data['Estrés (%)']
 
 # Normalizar los datos
@@ -27,31 +27,11 @@ param_grid = {
     'n_estimators': [500],
     'criterion': ['absolute_error'],
     'max_depth': [10],
-    'min_samples_split': [ 10],
+    'min_samples_split': [10],
     'min_samples_leaf': [1],
-    'max_features': [ 'sqrt'],
+    'max_features': ['sqrt'],
     'bootstrap': [True],
 }
-# param_grid = {
-#     'n_estimators': [10, 50, 100, 200, 500, 1000],  # Número de árboles en el bosque
-#     'criterion': ['squared_error', 'absolute_error', 'poisson'],  # Función para medir la calidad de una división
-#     'max_depth': [None, 10, 20, 30, 40, 50],  # Profundidad máxima del árbol
-#     'min_samples_split': [2, 5, 10, 20],  # Número mínimo de muestras necesarias para dividir un nodo
-#     'min_samples_leaf': [1, 2, 4, 8],  # Número mínimo de muestras necesarias en un nodo hoja
-#     'min_weight_fraction_leaf': [0.0, 0.1, 0.2],  # Fracción mínima de peso de la suma total en un nodo hoja
-#     'max_features': ['auto', 'sqrt', 'log2'],  # Número de características a considerar para la mejor división
-#     'max_leaf_nodes': [None, 10, 20, 30],  # Crecimiento máximo de nodos hojas en el árbol
-#     'min_impurity_decrease': [0.0, 0.1, 0.2],  # Umbral para reducir la impureza
-#     'bootstrap': [True, False],  # Si se debe utilizar el muestreo con reemplazo
-#     'oob_score': [True, False],  # Si se debe utilizar la muestra fuera de bolsa para evaluar la precisión generalizada
-#     'n_jobs': [-1, 1],  # Número de trabajos para ejecutar en paralelo (-1 usa todos los procesadores)
-#     'random_state': [None, 42],  # Semilla para el generador de números aleatorios
-#     'verbose': [0, 1],  # Nivel de verbosidad
-#     'warm_start': [False, True],  # Reutilizar la solución del ajuste anterior para agregar más estimadores al conjunto
-#     'ccp_alpha': [0.0, 0.1, 0.2],  # Complejidad de coste para poda mínima
-#     'max_samples': [None, 0.5, 0.75, 1.0],  # Número o fracción de muestras para entrenar cada base estimador
-# }
-
 
 best_r2 = 0
 best_model = None
@@ -93,64 +73,51 @@ test_mae = mean_absolute_error(y_test, y_pred_test)
 train_medae = median_absolute_error(y_train, y_pred_train)
 test_medae = median_absolute_error(y_test, y_pred_test)
 
-# Discretizar los niveles de estrés en categorías: bajo (0-33), medio (34-66), alto (67-100)
-bins = [0, 33, 66, 100]
-labels = ['Bajo', 'Medio', 'Alto']
-y_train_binned = pd.cut(y_train, bins=bins, labels=labels, include_lowest=True)
-y_test_binned = pd.cut(y_test, bins=bins, labels=labels, include_lowest=True)
-y_pred_test_binned = pd.cut(y_pred_test, bins=bins, labels=labels, include_lowest=True)
-
-# Crear la matriz de confusión
-cm = confusion_matrix(y_test_binned, y_pred_test_binned, labels=labels)
-
-# Mostrar la matriz de confusión
-plt.figure(figsize=(6, 6))
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
-disp.plot(cmap=plt.cm.Blues)
-plt.title('Matriz de Confusión')
-plt.show()
-
-# Calcular el accuracy
-accuracy = accuracy_score(y_test_binned, y_pred_test_binned)
-print(f'Accuracy: {accuracy}')
-
 # Mostrar resultados de evaluación
 print(f'Train MSE: {train_mse}, Train R²: {train_r2}')
 print(f'Test MSE: {test_mse}, Test R²: {test_r2}')
 print(f'Train MAE: {train_mae}, Test MAE: {test_mae}')
 print(f'Train MedAE: {train_medae}, Test MedAE: {test_medae}')
+print(f'Mejor conjunto de hiperparámetros: {best_params}')
+print(f'Mejor R²: {best_r2}')
 
-# Graficar resultados de predicción
-plt.figure(figsize=(14, 8))
-
-# Gráfico de MSE
-plt.subplot(2, 2, 1)
-plt.bar(['Train MSE', 'Test MSE'], [train_mse, test_mse], color=['blue', 'orange'])
-plt.title('MSE')
-
-# Gráfico de R²
-plt.subplot(2, 2, 2)
-plt.bar(['Train R²', 'Test R²'], [train_r2, test_r2], color=['blue', 'orange'])
-plt.title('R²')
-
-# Gráfico de MAE
-plt.subplot(2, 2, 3)
-plt.bar(['Train MAE', 'Test MAE'], [train_mae, test_mae], color=['blue', 'orange'])
-plt.title('MAE')
-
-# Gráfico de MedAE
-plt.subplot(2, 2, 4)
-plt.bar(['Train MedAE', 'Test MedAE'], [train_medae, test_medae], color=['blue', 'orange'])
-plt.title('MedAE')
-
-plt.tight_layout()
+# Gráfica de predicciones vs valores reales
+plt.figure(figsize=(10, 5))
+plt.scatter(y_test, y_pred_test, color='blue', label='Predicciones')
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'k--', lw=3, label='Línea ideal')
+plt.xlabel('Valores Reales')
+plt.ylabel('Predicciones')
+plt.title('Valores Reales vs Predicciones')
+plt.legend()
+plt.grid(True)
 plt.show()
 
-# Datos de prueba para personas con diferentes niveles de estrés
+# Curva de error
+error = y_test - y_pred_test
+plt.figure(figsize=(10, 5))
+plt.hist(error, bins=25, color='orange', edgecolor='k')
+plt.xlabel('Error de Predicción')
+plt.ylabel('Frecuencia')
+plt.title('Histograma del Error de Predicción')
+plt.grid(True)
+plt.show()
+
+# Gráfica de MSE, R², MAE y MedAE
+metrics = ['Train MSE', 'Test MSE', 'Train R²', 'Test R²', 'Train MAE', 'Test MAE', 'Train MedAE', 'Test MedAE']
+values = [train_mse, test_mse, train_r2, test_r2, train_mae, test_mae, train_medae, test_medae]
+
+plt.figure(figsize=(14, 8))
+plt.bar(metrics, values, color=['blue', 'orange', 'blue', 'orange', 'blue', 'orange', 'blue', 'orange'])
+plt.title('Métricas del Modelo')
+plt.xticks(rotation=45)
+plt.grid(True)
+plt.show()
+
+# Datos de prueba para personas con diferentes niveles de estrés incluyendo edad
 test_data = [
-    {"Frecuencia Cardíaca": 65, "Frecuencia Respiratoria": 15, "Temperatura Corporal": 36.5},  # Estrés bajo
-    {"Frecuencia Cardíaca": 100, "Frecuencia Respiratoria": 25, "Temperatura Corporal": 37},  # Estrés medio
-    {"Frecuencia Cardíaca": 120, "Frecuencia Respiratoria": 30, "Temperatura Corporal": 38},  # Estrés alto
+    {"Frecuencia Cardíaca": 65, "Frecuencia Respiratoria": 15, "Temperatura Corporal": 36.5, "Edad": 22},  # Estrés bajo
+    {"Frecuencia Cardíaca": 100, "Frecuencia Respiratoria": 25, "Temperatura Corporal": 37, "Edad": 30},  # Estrés medio
+    {"Frecuencia Cardíaca": 120, "Frecuencia Respiratoria": 30, "Temperatura Corporal": 38, "Edad": 45},  # Estrés alto
 ]
 
 # Convertir los datos de prueba a DataFrame
@@ -165,6 +132,3 @@ stress_predictions = best_model.predict(test_df_scaled)
 print("Predicciones de estrés para datos de prueba:")
 for i, pred in enumerate(stress_predictions):
     print(f"Persona {i+1}: {pred:.2f}% de estrés")
-
-print(f'Mejor conjunto de hiperparámetros: {best_params}')
-print(f'Mejor R²: {best_r2}')

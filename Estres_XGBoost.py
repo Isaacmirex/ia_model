@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split, GridSearchCV
 from xgboost import XGBRegressor
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, median_absolute_error, confusion_matrix, ConfusionMatrixDisplay, accuracy_score
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, median_absolute_error
 import matplotlib.pyplot as plt
 import joblib
 
@@ -33,29 +33,6 @@ param_grid = {
     'reg_alpha': [0, 0.1, 0.5],
     'reg_lambda': [1, 1.5, 2]
 }
-# Parametros probados 
-# param_grid = {
-#     'n_estimators': [100, 200, 500, 1000],  # Number of boosting rounds
-#     'learning_rate': [0.01, 0.05, 0.1, 0.2, 0.3],  # Step size shrinkage
-#     'max_depth': [3, 5, 7, 9, 11, 13],  # Maximum depth of a tree
-#     'subsample': [0.5, 0.6, 0.7, 0.8, 0.9, 1.0],  # Subsample ratio of the training instances
-#     'colsample_bytree': [0.5, 0.6, 0.7, 0.8, 0.9, 1.0],  # Subsample ratio of columns when constructing each tree
-#     'colsample_bylevel': [0.5, 0.6, 0.7, 0.8, 0.9, 1.0],  # Subsample ratio of columns for each split, in each level
-#     'colsample_bynode': [0.5, 0.6, 0.7, 0.8, 0.9, 1.0],  # Subsample ratio of columns for each split, in each node
-#     'gamma': [0, 0.1, 0.2, 0.3, 0.4, 0.5],  # Minimum loss reduction required to make a further partition on a leaf node of the tree
-#     'min_child_weight': [1, 2, 3, 4, 5],  # Minimum sum of instance weight (hessian) needed in a child
-#     'max_delta_step': [0, 1, 2, 3, 4, 5],  # Maximum delta step we allow each leaf output to be
-#     'reg_alpha': [0, 0.1, 0.5, 1, 1.5, 2],  # L1 regularization term on weights
-#     'reg_lambda': [0.5, 1, 1.5, 2, 2.5, 3],  # L2 regularization term on weights
-#     'scale_pos_weight': [1, 2, 3, 4, 5],  # Balancing of positive and negative weights
-#     'base_score': [0.5, 0.75, 1],  # The initial prediction score of all instances, global bias
-#     'random_state': [42],  # Seed for random number generator
-#     'booster': ['gbtree', 'gblinear', 'dart'],  # Specify which booster to use: gbtree, gblinear or dart
-#     'tree_method': ['auto', 'exact', 'approx', 'hist', 'gpu_hist'],  # Specify which tree method to use
-#     'verbosity': [0, 1, 2, 3],  # The degree of verbosity
-#     'objective': ['reg:squarederror', 'reg:squaredlogerror', 'reg:logistic', 'binary:logistic', 'binary:logitraw', 'count:poisson', 'multi:softmax', 'multi:softprob', 'rank:pairwise', 'reg:gamma', 'reg:tweedie']  # Specify the learning task and the corresponding learning objective
-# }
-
 
 best_r2 = 0
 best_model = None
@@ -97,57 +74,44 @@ test_mae = mean_absolute_error(y_test, y_pred_test)
 train_medae = median_absolute_error(y_train, y_pred_train)
 test_medae = median_absolute_error(y_test, y_pred_test)
 
-# Discretizar los niveles de estrés en categorías: bajo (0-33), medio (34-66), alto (67-100)
-bins = [0, 33, 66, 100]
-labels = ['Bajo', 'Medio', 'Alto']
-y_train_binned = pd.cut(y_train, bins=bins, labels=labels, include_lowest=True)
-y_test_binned = pd.cut(y_test, bins=bins, labels=labels, include_lowest=True)
-y_pred_test_binned = pd.cut(y_pred_test, bins=bins, labels=labels, include_lowest=True)
-
-# Crear la matriz de confusión
-cm = confusion_matrix(y_test_binned, y_pred_test_binned, labels=labels)
-
-# Mostrar la matriz de confusión
-plt.figure(figsize=(6, 6))
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
-disp.plot(cmap=plt.cm.Blues)
-plt.title('Matriz de Confusión')
-plt.show()
-
-# Calcular el accuracy
-accuracy = accuracy_score(y_test_binned, y_pred_test_binned)
-print(f'Accuracy: {accuracy}')
-
 # Mostrar resultados de evaluación
 print(f'Train MSE: {train_mse}, Train R²: {train_r2}')
 print(f'Test MSE: {test_mse}, Test R²: {test_r2}')
 print(f'Train MAE: {train_mae}, Test MAE: {test_mae}')
 print(f'Train MedAE: {train_medae}, Test MedAE: {test_medae}')
+print(f'Mejor conjunto de hiperparámetros: {best_params}')
+print(f'Mejor R²: {best_r2}')
 
-# Graficar resultados de predicción
+# Gráfica de predicciones vs valores reales
+plt.figure(figsize=(10, 5))
+plt.scatter(y_test, y_pred_test, color='blue', label='Predicciones')
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'k--', lw=3, label='Línea ideal')
+plt.xlabel('Valores Reales')
+plt.ylabel('Predicciones')
+plt.title('Valores Reales vs Predicciones')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Curva de error
+error = y_test - y_pred_test
+plt.figure(figsize=(10, 5))
+plt.hist(error, bins=25, color='orange', edgecolor='k')
+plt.xlabel('Error de Predicción')
+plt.ylabel('Frecuencia')
+plt.title('Histograma del Error de Predicción')
+plt.grid(True)
+plt.show()
+
+# Gráfica de MSE, R², MAE y MedAE
+metrics = ['Train MSE', 'Test MSE', 'Train R²', 'Test R²', 'Train MAE', 'Test MAE', 'Train MedAE', 'Test MedAE']
+values = [train_mse, test_mse, train_r2, test_r2, train_mae, test_mae, train_medae, test_medae]
+
 plt.figure(figsize=(14, 8))
-
-# Gráfico de MSE
-plt.subplot(2, 2, 1)
-plt.bar(['Train MSE', 'Test MSE'], [train_mse, test_mse], color=['blue', 'orange'])
-plt.title('MSE')
-
-# Gráfico de R²
-plt.subplot(2, 2, 2)
-plt.bar(['Train R²', 'Test R²'], [train_r2, test_r2], color=['blue', 'orange'])
-plt.title('R²')
-
-# Gráfico de MAE
-plt.subplot(2, 2, 3)
-plt.bar(['Train MAE', 'Test MAE'], [train_mae, test_mae], color=['blue', 'orange'])
-plt.title('MAE')
-
-# Gráfico de MedAE
-plt.subplot(2, 2, 4)
-plt.bar(['Train MedAE', 'Test MedAE'], [train_medae, test_medae], color=['blue', 'orange'])
-plt.title('MedAE')
-
-plt.tight_layout()
+plt.bar(metrics, values, color=['blue', 'orange', 'blue', 'orange', 'blue', 'orange', 'blue', 'orange'])
+plt.title('Métricas del Modelo')
+plt.xticks(rotation=45)
+plt.grid(True)
 plt.show()
 
 # Datos de prueba para personas con diferentes niveles de estrés
@@ -169,6 +133,3 @@ stress_predictions = best_model.predict(test_df_scaled)
 print("Predicciones de estrés para datos de prueba:")
 for i, pred in enumerate(stress_predictions):
     print(f"Persona {i+1}: {pred:.2f}% de estrés")
-
-print(f'Mejor conjunto de hiperparámetros: {best_params}')
-print(f'Mejor R²: {best_r2}')
