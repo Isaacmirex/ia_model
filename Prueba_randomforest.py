@@ -31,8 +31,11 @@ def main():
     # Realizar la predicción
     stress_prediction = model.predict(user_data_scaled)
     
+    # Ajustar la predicción al rango de 0 a 56 y redondear al entero más cercano
+    stress_prediction_scaled = int((stress_prediction[0] / 100) * 56)
+    
     # Mostrar la predicción
-    print(f"Predicción de estrés: {stress_prediction[0]:.2f}%")
+    print(f"Predicción de estrés en puntos: {stress_prediction_scaled} \nPredicción de estrés en porcentaje: {stress_prediction[0]:.2f}%")
 
 if __name__ == "__main__":
     main()
